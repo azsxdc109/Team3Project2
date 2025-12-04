@@ -14,20 +14,23 @@ import java.sql.SQLException;
 public class DBConnection {
 
     // --- 데이터베이스 연결 설정 ---
-    // 개발 환경에 맞게 아래의 상수들을 수정해야 합니다.
+    // 실제 운영 환경에서는 환경 변수나 별도의 설정 파일에서 주입받도록 분리하는 것이 좋습니다.
 
     /** JDBC 드라이버 클래스 이름 */
     private static final String DRIVER = "com.mysql.cj.jdbc.Driver";
 
-    /** 데이터베이스 URL: localhost의 3306 포트에 있는 foodspot_db 데이터베이스에 연결합니다. */
-    /** `serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8`는 한글 깨짐 방지 및 시간대 설정을 위한 필수 옵션입니다. */
-    private static final String URL = "jdbc:mysql://172.168.10.35:3306/foodspot_db?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8";
+    /**
+     * 데이터베이스 URL
+     * 예시: jdbc:mysql://localhost:3306/foodspot_db?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8
+     */
+    private static final String URL =
+            "jdbc:mysql://[HOST]:3306/[DB_NAME]?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8";
 
-    /** 데이터베이스 사용자 이름 */
-    private static final String USER = "foodspot";
+    /** 데이터베이스 사용자 이름 (공개 저장소에는 실제 계정 대신 플레이스홀더를 사용합니다.) */
+    private static final String USER = "[DB_USER]";
 
-    /** 데이터베이스 비밀번호 */
-    private static final String PASSWORD = "spotspot"; // TODO: 본인의 비밀번호로 변경하세요.
+    /** 데이터베이스 비밀번호 (공개 저장소에는 실제 비밀번호 대신 플레이스홀더를 사용합니다.) */
+    private static final String PASSWORD = "[DB_PASSWORD]";
 
     // ----------------------------
 
@@ -40,24 +43,20 @@ public class DBConnection {
     public static Connection getConnection() {
         try {
             // 1. JDBC 드라이버 로드
-            // Class.forName() 메소드는 지정된 드라이버 클래스를 메모리에 올립니다.
             Class.forName(DRIVER);
-            System.out.println("JDBC 드라이버 로드 성공"); // 디버깅용 메시지
+            System.out.println("JDBC 드라이버 로드 성공"); // 디버깅용 메시지 (운영 환경에서는 로깅 프레임워크 사용 권장)
 
             // 2. 데이터베이스 연결
-            // DriverManager.getConnection()을 호출하여 실제 DB 연결을 생성합니다.
             return DriverManager.getConnection(URL, USER, PASSWORD);
 
         } catch (ClassNotFoundException e) {
-            // JDBC 드라이버 클래스가 존재하지 않을 때 발생하는 예외
             System.err.println("JDBC 드라이버를 찾을 수 없습니다: " + e.getMessage());
             e.printStackTrace();
         } catch (SQLException e) {
-            // DB 연결 관련 오류 발생 시 (잘못된 URL, USER, PASSWORD 등)
             System.err.println("데이터베이스 연결에 실패했습니다: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         // 연결 실패 시 null을 반환하여 호출 측에서 예외를 처리하도록 유도합니다.
         return null;
     }
@@ -72,7 +71,6 @@ public class DBConnection {
      */
     public static void close(Connection conn, PreparedStatement pstmt, ResultSet rs) {
         try {
-            // 자원이 null이 아닌 경우에만 close()를 호출합니다.
             // 역순으로 닫는 것이 일반적인 관례입니다. (rs -> pstmt -> conn)
             if (rs != null) {
                 rs.close();
@@ -84,12 +82,11 @@ public class DBConnection {
                 conn.close();
             }
         } catch (SQLException e) {
-            // 자원 해제 중 발생하는 예외
             System.err.println("자원 해제 중 오류가 발생했습니다: " + e.getMessage());
             e.printStackTrace();
         }
     }
-    
+
     /**
      * 오버로딩된 close 메소드: ResultSet이 없는 경우 사용합니다.
      * 주로 INSERT, UPDATE, DELETE 쿼리 실행 후 호출됩니다.
